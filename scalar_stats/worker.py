@@ -13,9 +13,8 @@ from .config import load_db_config
 
 
 def _process_one(row: dict, root: Path, stats_keys: list[str] | None = None) -> dict:
-    """Resolve path, load file, compute selected stats."""
+    """Resolve path, load file, compute selected stats (scalar + optional image coverage)."""
     relpath = (row.get("relpath") or "").strip()
-    # Normalize slashes so "a/b" joins correctly on Windows
     parts = relpath.replace("\\", "/").split("/")
     abs_path = (root / Path(*parts)).resolve()
     arr, err = loaders.load_file_as_array(abs_path)
@@ -23,7 +22,22 @@ def _process_one(row: dict, root: Path, stats_keys: list[str] | None = None) -> 
     if err:
         out["file_stats_error"] = err
         return out
-    out.update(stats.compute_scalar_stats(arr, stats_keys=stats_keys))
+    wanted = set(stats_keys) if stats_keys else set(stats.ALL_STAT_KEYS)
+    scalar_keys = [k for k in (stats_keys or stats.ALL_STAT_KEYS) if k not in stats.IMAGE_ONLY_KEYS]
+    out.update(stats.compute_scalar_stats(arr, stats_keys=scalar_keys if scalar_keys else None))
+    image_keys = [k for k in (stats_keys or stats.ALL_STAT_KEYS) if k in stats.IMAGE_ONLY_KEYS]
+    if image_keys:
+        suffix = abs_path.suffix.lower()
+        arr_2d, err_2d = None, None
+        if suffix in loaders.IMAGE_EXT:
+            arr_2d, err_2d = loaders.load_image_2d(abs_path)
+        elif suffix in loaders.CSV_EXT:
+            arr_2d, err_2d = loaders.load_csv_2d(abs_path)
+        if arr_2d is not None and err_2d is None:
+            out.update(stats.compute_image_coverage(arr_2d, stats_keys=image_keys))
+        else:
+            for k in image_keys:
+                out[k] = float("nan")
     return out
 
 

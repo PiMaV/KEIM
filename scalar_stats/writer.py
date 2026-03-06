@@ -9,7 +9,9 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-STAT_COLUMNS = ("file_min", "file_max", "file_mean", "file_std", "file_median", "file_snr")
+from . import stats
+
+STAT_COLUMNS = stats.ALL_STAT_KEYS
 ERROR_COLUMN = "file_stats_error"
 
 

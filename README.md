@@ -61,10 +61,22 @@ Die Ausgabe erscheint in der Konsole bzw. kann von DAMPF aus gelesen werden (z.B
 
 Aus dem Projektverzeichnis: `python -m pytest tests/`
 
-## Icon (64 px, eine Datei)
+## Icon (Exe + Fenster)
 
-- **app_icon.py** – wiederverwendbar: in anderen Projekten kopieren, dann `icon/icon_64.ico` (64x64) ablegen und `set_window_icon(fenster)` aufrufen. Keine weiteren Groessen, kein Extra-Artwork.
-- **icon/icon_64.ico** – einzige Icon-Datei (Exe + Fenster). Aus **icon_64.png** erzeugen: `uv run python icon/build_ico.py`.
+- **app_icon.py** – wiederverwendbar: in andere Projekte kopieren, `icon/icon_64.ico` ablegen, `set_window_icon(fenster)` aufrufen.
+- **icon/icon_64.ico** – eine .ico mit **mehreren Groessen (16, 32, 48, 64, 128, 256)**. Windows zeigt das Exe-Icon im Explorer nur, wenn die .ico mehrere Groessen enthaelt; eine einzige 64x64 reicht dafuer oft nicht.
+- Erzeugen: `icon_256.png` (oder `icon_64.png`) in `icon/` legen, dann `uv run python icon/build_ico.py`. Das Skript schreibt `icon_64.ico` mit allen Groessen.
+
+### Auf andere Programme anwenden (z.B. DAMPF)
+
+1. **Icon-Ordner:** Im Projekt z.B. `icon/` mit mindestens einer PNG (z.B. `icon_64.png` oder `icon_256.png`).
+2. **build_ico.py** aus KEIM kopieren nach `icon/build_ico.py`, einmal ausfuehren → `icon/icon_64.ico` mit 16..256 px.
+3. **app_icon.py** aus KEIM ins Projektroot kopieren. Im Hauptfenster: `set_window_icon(self, "icon_64.ico", relative_to=Path(__file__).resolve().parent.parent)` (oder passenden Pfad).
+4. **PyInstaller-Spec:** Icon fuer die Exe setzen und in datas packen:
+   - `_icon_64_ico = os.path.join(SPECPATH, 'icon', 'icon_64.ico')`
+   - `datas` um `[(_icon_64_ico, 'icon')]` erweitern
+   - `EXE(..., icon=_icon_64_ico)`
+5. Exe neu bauen. Falls Explorer das Icon nicht zeigt: Icon-Cache leeren (Explorer neu starten / Rechner neu starten) oder sicherstellen, dass die .ico wirklich 16/32/48/64/128/256 enthaelt.
 
 ## Projektstruktur
 

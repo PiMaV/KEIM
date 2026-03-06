@@ -1,12 +1,16 @@
 """
 Scalar statistics from 1D array: min, max, mean, std, median, SNR.
-Uses np.nanmin etc.; SNR = mean/std (std > 0), else nan.
+Image-only: content_pct (threshold + % above), bbox_area_pct (% of image covered by content bbox).
 """
 from __future__ import annotations
 
 import numpy as np
 
-ALL_STAT_KEYS = ("file_min", "file_max", "file_mean", "file_std", "file_median", "file_snr")
+ALL_STAT_KEYS = (
+    "file_min", "file_max", "file_mean", "file_std", "file_median", "file_snr",
+    "file_content_pct", "file_bbox_area_pct",
+)
+IMAGE_ONLY_KEYS = ("file_content_pct", "file_bbox_area_pct")
 
 
 def compute_scalar_stats(arr: np.ndarray, stats_keys: list[str] | None = None) -> dict[str, float]:
@@ -43,3 +47,36 @@ def _filter_stats(full: dict[str, float], stats_keys: list[str] | None) -> dict[
     if stats_keys is None:
         return full
     return {k: full[k] for k in stats_keys if k in full}
+
+
+def compute_image_coverage(
+    arr_2d: np.ndarray,
+    threshold: str = "mean",
+    stats_keys: list[str] | None = None,
+) -> dict[str, float]:
+    """
+    Threshold image, build content mask, return fraction of pixels above threshold (content %)
+    and fraction of image area covered by the content bounding box.
+    threshold: "mean" or "median" (relative to image values).
+    """
+    arr_2d = np.asarray(arr_2d, dtype=float)
+    if arr_2d.ndim != 2 or arr_2d.size == 0:
+        out = {"file_content_pct": float("nan"), "file_bbox_area_pct": float("nan")}
+        return _filter_stats(out, stats_keys)
+    th = np.nanmean(arr_2d) if threshold == "mean" else np.nanmedian(arr_2d)
+    if np.isnan(th):
+        out = {"file_content_pct": float("nan"), "file_bbox_area_pct": float("nan")}
+        return _filter_stats(out, stats_keys)
+    mask = arr_2d > th
+    total = arr_2d.size
+    content_pct = float(mask.sum() / total) if total else float("nan")
+    rows, cols = np.where(mask)
+    if len(rows) == 0:
+        bbox_area_pct = 0.0
+    else:
+        rmin, rmax = int(rows.min()), int(rows.max())
+        cmin, cmax = int(cols.min()), int(cols.max())
+        bbox_area = (rmax - rmin + 1) * (cmax - cmin + 1)
+        bbox_area_pct = float(bbox_area / total)
+    out = {"file_content_pct": content_pct, "file_bbox_area_pct": bbox_area_pct}
+    return _filter_stats(out, stats_keys)

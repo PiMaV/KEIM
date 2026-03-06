@@ -1,6 +1,7 @@
 """
-Unified interface: path -> 1D numpy array.
-Dispatch by extension: images (tifffile/PIL), CSV/TSV, npy, npz, h5/hdf5.
+Unified interface for picture-like data: path -> 1D or 2D numpy array.
+- Images: max 3D (H, W) or (H, W, C); third dimension = color channels. Reduced to 2D intensity for metrics.
+- CSV/TSV: rows and columns of numeric values -> 2D matrix (lines x columns).
 On error: None + error message.
 """
 from __future__ import annotations
@@ -49,24 +50,53 @@ def load_file_as_array(path: Path) -> Tuple[np.ndarray | None, str | None]:
 
 
 def _load_image(path: Path) -> Tuple[np.ndarray | None, str | None]:
+    arr_2d, err = load_image_2d(path)
+    if err or arr_2d is None:
+        return (None, err) if err else (None, "Unsupported image")
+    return np.asarray(arr_2d).flatten(), None
+
+
+def _image_to_2d(arr: np.ndarray) -> np.ndarray:
+    """Reduce image to 2D: (H,W) unchanged, (H,W,C) -> mean over channels."""
+    arr = np.asarray(arr, dtype=float)
+    if arr.ndim == 2:
+        return arr
+    if arr.ndim == 3:
+        return arr.mean(axis=-1)
+    return arr.reshape(-1, arr.shape[-2], arr.shape[-1])[0]
+
+
+def load_image_2d(path: Path) -> Tuple[np.ndarray | None, str | None]:
+    """Load image as 2D array (max 3D on disk: H,W or H,W,C; C reduced to intensity). For coverage/bbox."""
+    path = Path(path)
+    if not path.exists():
+        return None, f"File missing: {path}"
+    if path.suffix.lower() not in IMAGE_EXT:
+        return None, f"Not an image: {path.suffix}"
     ext = path.suffix.lower()
     if ext in {".tif", ".tiff"} and tifffile is not None:
         try:
             arr = tifffile.imread(path)
-            return np.asarray(arr).flatten(), None
+            return _image_to_2d(arr), None
         except Exception as e:
             return None, str(e)
     if Image is not None:
         try:
             img = Image.open(path)
             arr = np.array(img)
-            return np.asarray(arr).flatten(), None
+            return _image_to_2d(arr), None
         except Exception as e:
             return None, str(e)
     return None, "tifffile or Pillow required for image files"
 
 
-def _load_csv_tsv(path: Path) -> Tuple[np.ndarray | None, str | None]:
+def load_csv_2d(path: Path) -> Tuple[np.ndarray | None, str | None]:
+    """Load CSV/TSV as 2D matrix (lines x columns of numeric values). Returns (array, None) or (None, error)."""
+    path = Path(path)
+    if not path.exists():
+        return None, f"File missing: {path}"
+    if path.suffix.lower() not in CSV_EXT:
+        return None, f"Not CSV/TSV: {path.suffix}"
     try:
         import csv
         delim = "\t" if path.suffix.lower() == ".tsv" else ","
@@ -75,18 +105,33 @@ def _load_csv_tsv(path: Path) -> Tuple[np.ndarray | None, str | None]:
             rows = list(reader)
         if not rows:
             return None, "Empty file"
-        values = []
+        parsed = []
         for row in rows:
+            line = []
             for cell in row:
                 try:
-                    values.append(float(cell))
+                    line.append(float(cell))
                 except ValueError:
                     pass
-        if not values:
+            if line:
+                parsed.append(line)
+        if not parsed:
             return None, "No numeric values found"
-        return np.array(values, dtype=float), None
+        n_cols = min(len(r) for r in parsed)
+        if n_cols == 0:
+            return None, "No numeric values found"
+        arr = np.array([r[:n_cols] for r in parsed], dtype=float)
+        return arr, None
     except Exception as e:
         return None, str(e)
+
+
+def _load_csv_tsv(path: Path) -> Tuple[np.ndarray | None, str | None]:
+    """Load CSV/TSV as 1D array (flattened 2D matrix) for scalar stats."""
+    arr_2d, err = load_csv_2d(path)
+    if err or arr_2d is None:
+        return (None, err) if err else (None, "Empty CSV/TSV")
+    return np.asarray(arr_2d).flatten(), None
 
 
 def _load_npy(path: Path) -> Tuple[np.ndarray | None, str | None]:

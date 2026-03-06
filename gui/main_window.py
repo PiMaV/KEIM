@@ -39,7 +39,7 @@ except ImportError:
     def window_title() -> str:
         return "KEIM - Scalar statistics"
 
-# Stat keys for checkboxes (label, key)
+# Stat keys for checkboxes (label, key). Image-only: Content %, BBox area %
 STAT_CHOICES = [
     ("Min", "file_min"),
     ("Max", "file_max"),
@@ -47,6 +47,8 @@ STAT_CHOICES = [
     ("Std", "file_std"),
     ("Median", "file_median"),
     ("SNR", "file_snr"),
+    ("Content %", "file_content_pct"),
+    ("BBox area %", "file_bbox_area_pct"),
 ]
 
 

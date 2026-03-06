@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from scalar_stats.loaders import load_file_as_array
+from scalar_stats.loaders import load_file_as_array, load_csv_2d
 
 
 def test_load_csv(sample_csv):
@@ -28,3 +28,12 @@ def test_load_missing_file(tmp_path):
     assert arr is None
     assert err is not None
     assert "missing" in str(err).lower()
+
+
+def test_load_csv_2d(sample_csv):
+    arr, err = load_csv_2d(sample_csv)
+    assert err is None
+    assert arr is not None
+    assert arr.shape == (2, 3)
+    np.testing.assert_array_almost_equal(arr[0], [1.0, 2.0, 3.0])
+    np.testing.assert_array_almost_equal(arr[1], [4.0, 5.0, 6.0])
