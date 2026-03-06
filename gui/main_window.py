@@ -28,9 +28,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
+from app_icon import set_window_icon
 from scalar_stats.worker import run_pipeline
 from scalar_stats.reader import get_data_table_count, get_table_names, get_table_columns, get_count_from_table
 from scalar_stats.config import load_db_config
+
+try:
+    from version_info import window_title
+except ImportError:
+    def window_title() -> str:
+        return "KEIM - Scalar statistics"
 
 # Stat keys for checkboxes (label, key)
 STAT_CHOICES = [
@@ -77,8 +84,9 @@ class PipelineThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("KEIM - Scalar statistics")
+        self.setWindowTitle(window_title())
         self.setAcceptDrops(True)
+        set_window_icon(self, basename="icon_64.ico", relative_to=Path(__file__).resolve().parent.parent)
         self._thread: PipelineThread | None = None
         self._build_ui()
 
