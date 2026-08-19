@@ -4,7 +4,7 @@
 
 **Kontext:** DAMPF schreibt eine SQLite-DB mit einer Tabelle: `id`, `relpath` (Pfad relativ zum DB-Verzeichnis), plus indexierte Felder. Die Dateien liegen relativ zum DB-Ordner (oder konfigurierbarem Root). Dieses Programm liest die DB (oder index.jsonl), loest `relpath` auf, laedt jede Datei, berechnet Statistiken und schreibt das Ergebnis.
 
-**Name:** KEIM - (Knowledge Extraction & Indexing Module)
+**Name:** KEIM - (Knowledge Extraction & Inference Module)
 
 ---
 

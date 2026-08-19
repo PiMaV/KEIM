@@ -3,6 +3,7 @@ name = "keim"
 version = "1.0.0"
 description = "KEIM - Scalar statistics on linked files (DAMPF DB / index.jsonl)"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.20",

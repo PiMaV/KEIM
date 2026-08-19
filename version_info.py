@@ -30,7 +30,7 @@ def get_version() -> str:
         return "0.0.0"
 
 
-APP_NAME = "Knowledge Extraction and Index Module"
+APP_NAME = "Knowledge Extraction and Inference Module"
 
 
 def window_title() -> str:
